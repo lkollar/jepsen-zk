@@ -33,7 +33,7 @@
   ((zk-node-ids test) node))
 
 (defn zoo-cfg-servers
-  "Create a config fragmeng in zoo.cfg"
+  "Create a config fragment in zoo.cfg"
   [test]
   (->> (zk-node-ids test)
        (map (fn [[node id]]
