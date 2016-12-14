@@ -19,8 +19,6 @@
              [jepsen.checker.timeline :as timeline]))
 
 
-;!lein run -- test --nodes-file ~/nodes --username admin
-
 (defn zk-node-ids
   "Given a test configuration build a map of nodes"
   [test]
@@ -95,7 +93,8 @@
         (client conn a)))
 
     (invoke! [this test op]
-      (timeout 5000 (assoc op :type :info, :error :timeout)
+      (timeout 5000
+               (assoc op :type :info, :error :timeout)
                (case (:f op)
                  :read (assoc op :type :ok, :value @a)
                  :write (do
