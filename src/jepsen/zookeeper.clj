@@ -4,15 +4,20 @@
              [clojure.tools.logging :refer :all]
              [clojure.java.io :as io]
              [clojure.string :as str]
+             [knossos.model :as model]
              [jepsen [cli :as cli]
+                     [checker :as checker]
                      [tests :as tests]
                      [db :as db]
                      [control :as c]
                      [tests :as tests]
                      [generator :as gen]
+                     [nemesis :as nemesis]
                      [client :as client]
                      [util :as util :refer [timeout]]]
-             [jepsen.os.debian :as debian]))
+             [jepsen.os.debian :as debian]
+             [jepsen.checker.timeline :as timeline]))
+
 
 ;!lein run -- test --nodes-file ~/nodes --username admin
 
@@ -54,7 +59,7 @@
                                   :> "/etc/zookeeper/conf/zoo.cfg")
         (info node "starting ZK")
         (c/exec :service :zookeeper :restart)
-        (Thread/sleep 500)
+        (Thread/sleep 5000)
         (info node "started ZK")))
 
     (teardown! [_ test node]
@@ -123,10 +128,20 @@
      :name "zookeper"
      :db (db "3.4.5+dfsg-2")
      :client (client nil nil)
+     :nemesis (nemesis/partition-random-halves)
      :generator (->> (gen/mix [r w cas])
                      (gen/stagger 1)
-                     (gen/clients)
-                     (gen/time-limit 15))}))
+                     (gen/nemesis
+                       (gen/seq (cycle [(gen/sleep 5)
+                                        {:type :info :f :start}
+                                        (gen/sleep 5)
+                                        {:type :info :f :stop}])))
+
+                     (gen/time-limit 15))
+     :model (model/cas-register 0)
+     :checker (checker/compose {:perf (checker/perf)
+                                 :linear checker/linearizable
+                                 :html (timeline/html)})}))
 
 (defn -main
   "Handle command line arguments"
